@@ -17,5 +17,4 @@ This zip contains:
 - Dashboard: `http://app.example.com`
 
 ## Notes
-- Replace `example.com` with your domain in `Caddyfile`, extension `popup.js`, and options page.
 - Harden security and add real preview gate + password/expiry checks before production.
