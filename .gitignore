@@ -1,0 +1,101 @@
+# =============================
+# Python / Django / FastAPI
+# =============================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+.env
+.env.*
+venv/
+venv*/
+ENV/
+*.sqlite3
+db.sqlite3
+*.log
+*.pid
+*.pyc
+migrations/__pycache__/
+*.cover
+coverage/
+*.sqlite*
+*.db
+
+# Django / local settings
+local_settings.py
+*.secret
+*.pem
+*.key
+
+# =============================
+# Node / React (Vite)
+# =============================
+node_modules/
+dist/
+.vite/
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# =============================
+# Redis / Caches
+# =============================
+*.rdb
+dump.rdb
+__redis__*
+
+# =============================
+# System / Editor / IDE
+# =============================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# =============================
+# Build / Generated Artifacts
+# =============================
+build/
+coverage/
+htmlcov/
+*.out
+*.spec
+*.bin
+*.lock
+*.log
+
+# =============================
+# Test / Temp
+# =============================
+pytest_cache/
+.cache/
+temp/
+tmp/
+*.test.js
+*.test.ts
+*.test.tsx
+*.pytest_cache/
+
+# =============================
+# Docker / Compose (optional)
+# =============================
+*.pid
+*.sock
+*.tar
+*.gz
+*.zip
+.docker/
+docker-compose.override.yml
+docker-data/

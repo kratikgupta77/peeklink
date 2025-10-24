@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>PeekLink</title>
+<style>
+  body{font:14px system-ui;margin:12px 12px 14px;width:320px}
+  input{width:100%;padding:8px}
+  button{margin-top:10px;padding:8px 12px}
+  .row{display:flex;gap:8px;margin-top:8px}
+  .hint{opacity:.7;margin-top:6px}
+</style>
+<h3>PeekLink</h3>
+<input id="url" placeholder="Paste a URL or uses current tab…" />
+<div class="row">
+  <button id="useTab">Use current</button>
+  <button id="shorten">Shorten & Preview</button>
+</div>
+<p class="hint"><a href="options.html" target="_blank">Settings</a></p>
+<script src="popup.js"></script>

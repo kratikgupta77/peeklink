@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "PeekLink — Safe Shortener",
+  "version": "0.1.0",
+  "description": "Shorten a URL and open a safe preview gate powered by PeekLink.",
+  "action": { "default_popup": "popup.html" },
+  "background": { "service_worker": "sw.js" },
+  "permissions": ["contextMenus", "activeTab", "storage", "notifications"],
+  "host_permissions": ["http://127.0.0.1:8000/*"],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "options_page": "options.html"
+}

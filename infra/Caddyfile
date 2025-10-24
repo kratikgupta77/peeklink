@@ -1,0 +1,21 @@
+
+{
+    auto_https disable_redirects
+}
+
+api.example.com {
+    reverse_proxy api:8000
+}
+
+model.example.com {
+    reverse_proxy verdicts:9000
+}
+
+app.example.com {
+    reverse_proxy dashboard:80
+}
+
+s.example.com {
+    # preview/redirect service could be served from api for now
+    reverse_proxy api:8000
+}
