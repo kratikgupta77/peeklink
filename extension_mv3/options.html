@@ -8,19 +8,29 @@
   small{opacity:.7}
 </style>
 <h2>PeekLink settings</h2>
-<label>API base URL</label>
-<input id="apiBase" placeholder="http://127.0.0.1:8000">
-<button id="saveBtn">Save</button>
+  <label>API base URL</label>
+  <input id="apiBase" placeholder="http://127.0.0.1:8000">
+  <label style="margin-top:12px">Dashboard URL (for analytics)</label>
+  <input id="dashboardBase" placeholder="http://127.0.0.1:5173">
+  <button id="saveBtn">Save</button>
 <p><small>Default: http://127.0.0.1:8000</small></p>
 <script>
 const key = "apiBase";
+const dashboardKey = "dashboardBase";
 const def = "http://127.0.0.1:8000";
-chrome.storage.sync.get([key], v=>{
+const defDashboard = "http://127.0.0.1:5173";
+chrome.storage.sync.get([key, dashboardKey], v=>{
   apiBase.value = v[key] || def;
+  dashboardBase.value = v[dashboardKey] || defDashboard;
 });
 saveBtn.onclick = () => {
   let val = apiBase.value.trim().replace(/\/+$/,'');
-  if(!/^https?:\/\//.test(val)){ alert("Enter http(s) URL"); return; }
-  chrome.storage.sync.set({[key]: val}, ()=> alert("Saved"));
+  if(!/^https?:\/\//.test(val)){ alert("Enter http(s) URL for API"); return; }
+  let dashVal = dashboardBase.value.trim().replace(/\/+$/,'');
+  if(dashVal && !/^https?:\/\//.test(dashVal)){ alert("Enter http(s) URL for Dashboard"); return; }
+  chrome.storage.sync.set({
+    [key]: val,
+    [dashboardKey]: dashVal || defDashboard
+  }, ()=> alert("Saved"));
 };
 </script>

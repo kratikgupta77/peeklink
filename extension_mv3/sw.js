@@ -4,16 +4,41 @@ const defaultBase = "http://127.0.0.1:8000";
 function getApiBase() {
   return new Promise(res => chrome.storage.sync.get([storageKey], v => res((v && v[storageKey]) || defaultBase)));
 }
-async function createLink(target) {
+
+async function createLink(target, requirePassword = false, password = "", expiresAt = null) {
   const base = await getApiBase();
-  const resp = await fetch(`${base}/api/links`, {
+  const payload = {
+    target,
+    require_password: requirePassword,
+    analytics_opt_in: true
+  };
+  
+  if (password && requirePassword) {
+    payload.password = password;
+  }
+  
+  if (expiresAt) {
+    payload.expires_at = expiresAt;
+  }
+  
+  const resp = await fetch(`${base}/api/links/create`, {
     method: "POST",
     headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ target, require_password: false })
+    body: JSON.stringify(payload)
   });
-  if (!resp.ok) throw new Error(`API ${resp.status}`);
-  return resp.json(); // {id,target}
+  
+  if (!resp.ok) {
+    let msg = `API ${resp.status}`;
+    try {
+      const errJson = await resp.json();
+      msg = errJson.message || errJson.error || msg;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+  
+  return resp.json(); // {id, target, short_url}
 }
+
 function openPreview(id) {
   getApiBase().then(base => chrome.tabs.create({ url: `${base}/p/${id}` }));
 }

@@ -50,34 +50,50 @@ def _target_alive(url: str, timeout: float = 4.0):
 
 @csrf_exempt
 def create_link(request):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    data = _json(request)
-    target = data.get("target")
-    if not target:
-        return JsonResponse({"error":"target required"}, status=400)
-    ok, reason = _target_alive(target)
-    if not ok:
-        return JsonResponse({
-            "error": "target_unreachable",
-            "message": "Destination site could not be reached.",
-            "detail": reason,
-        }, status=400)
+    try:
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        data = _json(request)
+        target = data.get("target")
+        if not target:
+            return JsonResponse({"error":"target required"}, status=400)
+        
+        ok, reason = _target_alive(target)
+        if not ok:
+            return JsonResponse({
+                "error": "target_unreachable",
+                "message": "Destination site could not be reached.",
+                "detail": reason,
+            }, status=400)
 
-    link = Link(
-        target=target,
-        analytics_opt_in=bool(data.get("analytics_opt_in", False)),
-        require_password=bool(data.get("require_password", False)),
-    )
-    pw = data.get("password")
-    if pw:
-        link.password_hash = hashlib.sha256(pw.encode()).hexdigest()
-    expires = data.get("expires_at")
-    if expires:
-        dt = parse_datetime(expires)
-        link.expires_at = dt
-    link.save()
-    return JsonResponse({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
+        link = Link(
+            target=target,
+            analytics_opt_in=bool(data.get("analytics_opt_in", False)),
+            require_password=bool(data.get("require_password", False)),
+        )
+        pw = data.get("password")
+        if pw:
+            link.password_hash = hashlib.sha256(pw.encode()).hexdigest()
+        expires = data.get("expires_at")
+        if expires:
+            dt = parse_datetime(expires)
+            if dt:
+                link.expires_at = dt
+        max_clicks = data.get("max_clicks")
+        if max_clicks is not None:
+            try:
+                link.max_clicks = int(max_clicks)
+            except (ValueError, TypeError):
+                pass
+        link.save()
+        return JsonResponse({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
+    except Exception as e:
+        logger.error(f"Error in create_link: {e}", exc_info=True)
+        return JsonResponse({
+            "error": "internal_error",
+            "message": "An error occurred while creating the link. Please try again.",
+            "detail": str(e)
+        }, status=500)
 
 
 @api_view(["GET"])
@@ -356,6 +372,12 @@ def links_collection(request):
         if expires:
             dt = parse_datetime(expires)
             link.expires_at = dt
+        max_clicks = data.get("max_clicks")
+        if max_clicks is not None:
+            try:
+                link.max_clicks = int(max_clicks)
+            except (ValueError, TypeError):
+                pass
         link.save()
         return Response({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
 

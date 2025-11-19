@@ -14,6 +14,7 @@ urlpatterns = [
 
     # Links
     path("api/links", views.links_collection),                       # GET, POST (owner-scoped)
+    path("api/links/create", views.create_link),                    # POST (public, for extensions)
     path("api/links/<str:link_id>", views.get_link),                 # GET (owner-scoped)
     path("api/links/<str:link_id>/settings", views.update_link),     # PATCH (owner-scoped)
     path("api/links/<str:link_id>/delete", views.delete_link),       # DELETE (owner-scoped)

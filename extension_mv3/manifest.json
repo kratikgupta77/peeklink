@@ -3,14 +3,35 @@
   "name": "PeekLink — Safe Shortener",
   "version": "0.1.0",
   "description": "Shorten a URL and open a safe preview gate powered by PeekLink.",
-  "action": { "default_popup": "popup.html" },
-  "background": { "service_worker": "sw.js" },
-  "permissions": ["contextMenus", "activeTab", "storage", "notifications"],
-  "host_permissions": ["http://127.0.0.1:8000/*"],
+  
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "icons/download.jpg",
+    "48" : "icons/icon48.png",
+    "128": "icons/icon16"
   },
-  "options_page": "options.html"
+
+  "action": { 
+    "default_popup": "dist/popup.html",
+    "default_icon": {
+      "16": "icons/download.jpg",
+      "48": "icons/icon48.png",
+      "128": "icons/icon16"
+    }
+  },
+
+  "background": { "service_worker": "sw.js" },
+
+  "permissions": ["contextMenus", "activeTab", "storage", "notifications", "tabs"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://127.0.0.1:5173/*",
+    "http://127.0.0.1:9000/*"
+  ],
+
+  "options_page": "options.html",
+
+  "web_accessible_resources": [{
+    "resources": ["dist/*"],
+    "matches": ["<all_urls>"]
+  }]
 }

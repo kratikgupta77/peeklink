@@ -17,6 +17,7 @@ class Link(models.Model):
     password_hash = models.CharField(max_length=128, null=True, blank=True)
     require_password = models.BooleanField(default=False)
     expires_at = models.DateTimeField(null=True, blank=True)
+    max_clicks = models.IntegerField(null=True, blank=True, help_text="Link expires after this many redirect clicks")
     analytics_opt_in = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
