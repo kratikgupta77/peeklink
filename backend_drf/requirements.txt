@@ -9,3 +9,4 @@ redis
 Uvicorn
 django-cors-headers
 djangorestframework-simplejwt
+python-dotenv

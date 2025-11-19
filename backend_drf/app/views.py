@@ -1,7 +1,11 @@
+import logging
+logger = logging.getLogger(__name__)
 from django.views.decorators.csrf import csrf_exempt
-from .models import Link
+from .models import Link, EmailOTP
 from .verdicts_client import score_url
-import hashlib, json, html
+import hashlib, json, html, secrets
+import requests
+from datetime import timedelta
 from django.http import JsonResponse, HttpResponse, HttpResponseNotAllowed, HttpResponseNotFound, HttpResponseForbidden
 from django.shortcuts import redirect
 from django.utils import timezone
@@ -12,6 +16,10 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError
+from django.core.mail import send_mail
 
 
 def _json(request):
@@ -19,6 +27,25 @@ def _json(request):
         return json.loads(request.body.decode() or "{}")
     except Exception:
         return {}
+
+
+def _short_url(link_id: str) -> str:
+    base = (getattr(settings, "SITE_BASE_URL", "http://127.0.0.1:8000") or "").rstrip("/")
+    return f"{base}/r/{link_id}"
+
+
+def _target_alive(url: str, timeout: float = 4.0):
+    try:
+        for method in ("HEAD", "GET"):
+            resp = requests.request(method, url, timeout=timeout, allow_redirects=True)
+            status = resp.status_code
+            if 200 <= status < 400:
+                return True, None
+            if status in (404, 410):
+                return False, f"http_status_{status}"
+        return True, None
+    except requests.RequestException as exc:
+        return False, exc.__class__.__name__
 
 
 @csrf_exempt
@@ -29,6 +56,13 @@ def create_link(request):
     target = data.get("target")
     if not target:
         return JsonResponse({"error":"target required"}, status=400)
+    ok, reason = _target_alive(target)
+    if not ok:
+        return JsonResponse({
+            "error": "target_unreachable",
+            "message": "Destination site could not be reached.",
+            "detail": reason,
+        }, status=400)
 
     link = Link(
         target=target,
@@ -43,7 +77,7 @@ def create_link(request):
         dt = parse_datetime(expires)
         link.expires_at = dt
     link.save()
-    return JsonResponse({"id": link.id, "target": link.target})
+    return JsonResponse({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
 
 
 @api_view(["GET"])
@@ -61,6 +95,7 @@ def get_link(request, link_id):
         "analytics_opt_in": link.analytics_opt_in,
         "require_password": link.require_password,
         "has_password": bool(link.password_hash),
+        "short_url": _short_url(link.id),
     })
 
 
@@ -300,6 +335,13 @@ def links_collection(request):
         target = data.get("target")
         if not target:
             return Response({"error": "target required"}, status=400)
+        ok, reason = _target_alive(target)
+        if not ok:
+            return Response({
+                "error": "target_unreachable",
+                "message": "Destination site could not be reached.",
+                "detail": reason,
+            }, status=400)
 
         link = Link(
             owner=request.user,  # ⬅ tie to creator
@@ -315,7 +357,7 @@ def links_collection(request):
             dt = parse_datetime(expires)
             link.expires_at = dt
         link.save()
-        return Response({"id": link.id, "target": link.target})
+        return Response({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
 
     # GET list (owner-only)
     qs = Link.objects.filter(owner=request.user).order_by("-created_at")
@@ -329,6 +371,7 @@ def links_collection(request):
         "analytics_opt_in": r["analytics_opt_in"],
         "require_password": r["require_password"],
         "clicks": r["clicks"],
+        "short_url": _short_url(r["id"]),
     } for r in rows]
     return Response(out)
 from django.db.models.functions import TruncDate
@@ -416,3 +459,87 @@ def _normalize_referrer(value: str) -> str:
         return host or "direct"
     except Exception:
         return "direct"
+
+OTP_TTL_MINUTES = 10
+
+
+def _issue_otp(user):
+    code = "".join(secrets.choice("0123456789") for _ in range(6))
+    EmailOTP.objects.filter(user=user, verified=False).delete()
+    expires = timezone.now() + timedelta(minutes=OTP_TTL_MINUTES)
+    EmailOTP.objects.create(user=user, code=code, expires_at=expires)
+    try:
+        send_mail(
+            subject="PeekLink verification code",
+            message=f"Your PeekLink verification code is {code}. It expires in {OTP_TTL_MINUTES} minutes.",
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "peeklink@example.com"),
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        logger.exception("Failed to send OTP email to %s", user.email)
+        return False, str(exc)
+    return True, None
+
+
+User = get_user_model()
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def signup(request):
+    username = (request.data.get("username") or "").strip()
+    password = request.data.get("password") or ""
+    email = (request.data.get("email") or "").strip().lower()
+    if not username or not password or not email:
+        return Response({"error": "username_email_password_required"}, status=400)
+    if len(password) < 6:
+        return Response({"error": "password_too_short"}, status=400)
+    if User.objects.filter(email__iexact=email).exists():
+        return Response({"error": "email_taken"}, status=400)
+    try:
+        user = User.objects.create_user(username=username, password=password, email=email, is_active=False)
+    except IntegrityError:
+        return Response({"error": "username_taken"}, status=400)
+    ok, err = _issue_otp(user)
+    if not ok:
+        return Response({"error": "email_send_failed", "detail": err}, status=500)
+    return Response({"ok": True, "message": "Verification code sent"}, status=201)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def request_otp(request):
+    email = (request.data.get("email") or "").strip().lower()
+    if not email:
+        return Response({"error": "email_required"}, status=400)
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        return Response({"error": "unknown_email"}, status=404)
+    ok, err = _issue_otp(user)
+    if not ok:
+        return Response({"error": "email_send_failed", "detail": err}, status=500)
+    return Response({"ok": True})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def verify_otp(request):
+    email = (request.data.get("email") or "").strip().lower()
+    code = (request.data.get("code") or "").strip()
+    if not email or not code:
+        return Response({"error": "email_code_required"}, status=400)
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        return Response({"error": "unknown_email"}, status=404)
+    otp = EmailOTP.objects.filter(user=user, code=code, expires_at__gte=timezone.now()).first()
+    if not otp:
+        return Response({"error": "invalid_or_expired_code"}, status=400)
+    otp.verified = True
+    otp.save(update_fields=["verified"])
+    user.is_active = True
+    user.save(update_fields=["is_active"])
+    EmailOTP.objects.filter(user=user).exclude(id=otp.id).delete()
+    return Response({"ok": True})

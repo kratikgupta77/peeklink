@@ -1,14 +1,17 @@
 from django.conf import settings
 from django.db import models
 import secrets
+from django.utils import timezone
+
 
 class Link(models.Model):
     id = models.CharField(primary_key=True, max_length=16, editable=False)
-    owner = models.ForeignKey(                   # ⬅ NEW
+    owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="links",
-        null=True, blank=True,                   # keep nullable for easy rollout
+        null=True,
+        blank=True,
     )
     target = models.URLField()
     password_hash = models.CharField(max_length=128, null=True, blank=True)
@@ -23,9 +26,6 @@ class Link(models.Model):
         return super().save(*args, **kwargs)
 
 
-from django.db import models
-from django.utils import timezone
-
 class ClickEvent(models.Model):
     EVENT_CHOICES = (("preview", "preview"), ("redirect", "redirect"))
     link = models.ForeignKey(Link, on_delete=models.CASCADE, related_name="events")
@@ -35,12 +35,25 @@ class ClickEvent(models.Model):
     verdict_score = models.FloatField(default=0.0)
     referrer = models.CharField(max_length=256, blank=True, default="")
     ua_hash = models.CharField(max_length=64, blank=True, default="")
-    country = models.CharField(max_length=2, blank=True, default="")  # optional, keep blank
-
-    success = models.BooleanField(default=True)  # whether we actually redirected
+    country = models.CharField(max_length=2, blank=True, default="")
+    success = models.BooleanField(default=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["link", "ts"]),
             models.Index(fields=["verdict_label"]),
+        ]
+
+
+class EmailOTP(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="otps")
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    verified = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "code"]),
+            models.Index(fields=["expires_at"]),
         ]

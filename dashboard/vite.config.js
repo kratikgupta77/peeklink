@@ -11,7 +11,7 @@ export default defineConfig({
     "/api":   { target: "http://127.0.0.1:8000", changeOrigin: true },
     "/p":     { target: "http://127.0.0.1:8000", changeOrigin: true },
     "/r":     { target: "http://127.0.0.1:8000", changeOrigin: true },
-    "/score": { target: "http://127.0.0.1:8001", changeOrigin: true }, // FastAPI
+    "/score": { target: "http://127.0.0.1:9000", changeOrigin: true }, // FastAPI
     }
   }
 });

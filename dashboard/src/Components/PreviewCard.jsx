@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../api";
 
 function Badge({ label, score }) {
@@ -10,10 +10,16 @@ function Badge({ label, score }) {
   </span>;
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+
 export default function PreviewCard({ linkId }) {
   const [target, setTarget] = useState("");
   const [verdict, setVerdict] = useState(null);
   const [err, setErr] = useState("");
+  const [shortOverride, setShortOverride] = useState("");
+
+  const previewUrl = useMemo(() => `${API_BASE}/p/${linkId}`, [linkId]);
+  const shortUrl = useMemo(() => shortOverride || `${API_BASE}/r/${linkId}`, [shortOverride, linkId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,6 +30,7 @@ export default function PreviewCard({ linkId }) {
         const l = await r1.json();
         if (cancelled) return;
         setTarget(l.target);
+        setShortOverride(l.short_url || "");
 
         const r2 = await apiFetch(`/score`, {
           method: "POST",
@@ -43,7 +50,14 @@ export default function PreviewCard({ linkId }) {
     return () => { cancelled = true; };
   }, [linkId]);
 
-  const openGate = () => window.open(`http://127.0.0.1:8000/p/${linkId}`, "_blank");
+  const openGate = () => window.open(previewUrl, "_blank");
+  const copyShort = async () => {
+    try {
+      await navigator.clipboard.writeText(shortUrl);
+    } catch (_) {
+      /* noop */
+    }
+  };
 
   return (
     <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
@@ -60,8 +74,14 @@ export default function PreviewCard({ linkId }) {
           <ul>{verdict.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
         </details>
       )}
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 12, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <button onClick={openGate} style={{ padding: "10px 14px" }}>Open Sandbox (/p/{linkId})</button>
+        {verdict?.label === "safe" && shortUrl && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <code style={{ padding: "6px 10px", borderRadius: 6, background: "#f7f7f7" }}>{shortUrl}</code>
+            <button onClick={copyShort} style={{ padding: "8px 12px" }}>Copy Short URL</button>
+          </div>
+        )}
       </div>
       {err && <div style={{ color: "crimson", marginTop: 8 }}>{err}</div>}
     </div>

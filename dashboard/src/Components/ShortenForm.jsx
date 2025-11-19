@@ -23,7 +23,14 @@ export default function ShortenForm({ onCreated }) {
         require_password: false
       })
     });
-    if (!r.ok) throw new Error(`API ${r.status}`);
+    if (!r.ok) {
+      let msg = `API ${r.status}`;
+      try {
+        const errJson = await r.json();
+        msg = errJson.message || errJson.error || msg;
+      } catch (_) {}
+      throw new Error(msg);
+    }
     const data = await r.json();
     onCreated?.(data.id);
   } catch (e) {
