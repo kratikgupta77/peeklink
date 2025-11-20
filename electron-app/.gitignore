@@ -1,0 +1,12 @@
+node_modules/
+react-ui/node_modules/
+react-ui/dist/
+dist/
+*.log
+.DS_Store
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+

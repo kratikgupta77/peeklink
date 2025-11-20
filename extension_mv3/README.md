@@ -2,7 +2,29 @@
 
 React-based Chrome extension for PeekLink that requires authentication before use.
 
-## Setup
+## Quick Start (For Users)
+
+📖 **See [USER_GUIDE.md](./USER_GUIDE.md) for complete installation and usage instructions.**
+
+### Quick Installation
+
+1. **Build the extension:**
+   ```bash
+   npm install
+   npm run build
+   ```
+
+2. **Load in Chrome:**
+   - Go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the `extension_mv3` folder
+
+3. **Configure & Use:**
+   - Right-click extension icon → Options → Set API/Dashboard URLs
+   - Click extension icon → Log in → Start shortening links!
+
+## Developer Setup
 
 1. Install dependencies:
 ```bash
@@ -34,8 +56,10 @@ Note: For extension development, you'll need to manually reload the extension af
 - **Authentication Required**: Users must log in before using the extension
 - **Login Page**: Integrated login form that authenticates with the backend
 - **Shorten Form**: Full-featured form with password protection and expiry options
-- **Preview Card**: Shows verdict and allows opening preview/analytics
+- **Preview Tab**: Check URL safety before shortening
 - **Chrome Storage**: Auth tokens are stored in `chrome.storage.sync` for persistence
+- **Context Menu**: Right-click any link to shorten it
+- **Seamless Dashboard**: Click Analytics to open dashboard with auto-login
 
 ## Authentication Flow
 
@@ -49,4 +73,12 @@ Note: For extension development, you'll need to manually reload the extension af
 ## Configuration
 
 The extension uses the same API base URL as configured in the options page. Authentication tokens are synced via `chrome.storage.sync`.
+
+## User Documentation
+
+For end users, see **[USER_GUIDE.md](./USER_GUIDE.md)** which includes:
+- Step-by-step installation
+- First-time setup
+- How to use all features
+- Troubleshooting guide
 

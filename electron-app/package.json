@@ -1,0 +1,46 @@
+{
+  "name": "peeklink-desktop",
+  "version": "1.0.0",
+  "description": "PeekLink Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build-ui": "cd react-ui && npm install && npm run build",
+    "build": "npm run build-ui && electron-builder",
+    "dist": "npm run build-ui && electron-builder --publish=never"
+  },
+  "keywords": ["peeklink", "electron", "desktop"],
+  "author": "PeekLink Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.peeklink.desktop",
+    "productName": "PeekLink",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "react-ui/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  }
+}
+

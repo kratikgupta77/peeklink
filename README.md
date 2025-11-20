@@ -124,10 +124,21 @@ The PeekLink extension provides a convenient way to shorten links directly from 
 5. Click **Analytics** to open dashboard (automatically logged in)
 6. All created links sync with your dashboard account
 
+## Extension Architecture
+
+The Chrome extension is built with React and Vite, matching the dashboard's UI/UX:
+
+- **React Components** – `ShortenForm`, `PreviewTab`, `LoginPage` mirror dashboard functionality
+- **Authentication** – Uses `chrome.storage.sync` for token persistence; tokens sync across devices when Chrome sync is enabled
+- **API Integration** – Communicates with Django backend (`/api/links`, `/api/auth/token`) and FastAPI verdict service (`/score`)
+- **Seamless Dashboard Access** – Clicking "Analytics" passes the token via URL parameter, automatically logging you into the dashboard
+- **Context Menu** – Right-click any link on a webpage to shorten it (service worker handles this)
+
 ## Deployment Notes
 - Configure real SMTP credentials via environment vars (`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS/SSL`).
 - Set `SITE_BASE_URL` to your branded domain so APIs return fully qualified short URLs.
 - Run `python manage.py collectstatic` before deploying Django behind a real web server.
 - The `infra/` folder includes Docker Compose + Caddy examples for multi-service hosting.
+- For extension distribution, build with `npm run build` and package the `extension_mv3` folder (including `dist/`, `manifest.json`, `icons/`, etc.) for Chrome Web Store submission.
 
-Made my Kratik + Manas 
+Made by Kratik + Manas 
