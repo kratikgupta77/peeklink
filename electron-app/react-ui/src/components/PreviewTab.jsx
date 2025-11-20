@@ -24,12 +24,35 @@ export default function PreviewTab({ url, linkId }) {
     setDetails(null);
 
     try {
-      // Check verdict - FastAPI service
+      let actualTargetUrl = previewUrl;
+      let redirectCount = 0;
+      
+      // Check if this is a PeekLink preview/redirect URL
+      const peekLinkMatch = previewUrl.match(/\/[pr]\/([A-Za-z0-9_-]+)/);
+      if (peekLinkMatch) {
+        const linkId = peekLinkMatch[1];
+        try {
+          // Fetch the actual target URL from the backend
+          const linkResp = await fetch(`${apiBase}/api/links/${linkId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (linkResp.ok) {
+            const linkData = await linkResp.json();
+            actualTargetUrl = linkData.target;
+            redirectCount = 1; // PeekLink adds one redirect
+          }
+        } catch (e) {
+          console.warn("Could not fetch link details:", e);
+          // Continue with original URL if fetch fails
+        }
+      }
+
+      // Check verdict on the actual target URL
       const verdictUrl = apiBase.replace(":8000", ":9000");
       const r2 = await fetch(`${verdictUrl}/score`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: [{ url: previewUrl }] }),
+        body: JSON.stringify({ items: [{ url: actualTargetUrl }] }),
       });
       
       if (!r2.ok) throw new Error(`score ${r2.status}`);
@@ -42,22 +65,29 @@ export default function PreviewTab({ url, linkId }) {
         reasons: res.reasons || [],
       });
 
-      // Get URL details
+      // Get URL details for the actual target
       try {
         const startTime = Date.now();
-        const testResp = await fetch(previewUrl, { method: "GET", mode: "no-cors" }).catch(() => null);
+        const testResp = await fetch(actualTargetUrl, { method: "GET", mode: "no-cors" }).catch(() => null);
         const responseTime = Date.now() - startTime;
+        
+        let statusCode = "200";
+        try {
+          if (testResp && testResp.status) {
+            statusCode = testResp.status.toString();
+          }
+        } catch (_) {}
 
         setDetails({
-          finalDestination: previewUrl,
-          redirects: "1 redirect(s) detected", // Simplified
+          finalDestination: actualTargetUrl,
+          redirects: redirectCount > 0 ? `${redirectCount} redirect(s) detected` : "No redirects detected",
           responseTime: `${responseTime}ms`,
-          statusCode: "200", // Simplified
+          statusCode: statusCode,
         });
       } catch (e) {
         setDetails({
-          finalDestination: previewUrl,
-          redirects: "Unknown",
+          finalDestination: actualTargetUrl,
+          redirects: redirectCount > 0 ? `${redirectCount} redirect(s) detected` : "Unknown",
           responseTime: "N/A",
           statusCode: "N/A",
         });

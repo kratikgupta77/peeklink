@@ -1,0 +1,28 @@
+[Unit]
+Description=PeekLink Gunicorn daemon
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/peeklink/backend_drf
+Environment="PATH=/var/www/peeklink/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=peeklink.settings"
+Environment="SITE_BASE_URL=http://192.168.2.236"
+ExecStart=/var/www/peeklink/venv/bin/gunicorn \
+    --config /var/www/peeklink/deployment/gunicorn_config.py \
+    peeklink.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+
+# Security
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/peeklink/backend_drf /var/log/gunicorn /var/run/gunicorn
+
+[Install]
+WantedBy=multi-user.target
+

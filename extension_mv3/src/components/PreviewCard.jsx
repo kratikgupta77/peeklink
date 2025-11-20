@@ -24,7 +24,7 @@ function Badge({ label, score }) {
       }}
     >
       {label[0].toUpperCase() + label.slice(1)}{" "}
-      {typeof score === "number" ? `score=${score.toFixed(2)}` : ""}
+      {typeof score === "number" ? `threat=${score.toFixed(2)}` : ""}
     </span>
   );
 }

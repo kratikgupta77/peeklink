@@ -134,10 +134,41 @@ The Chrome extension is built with React and Vite, matching the dashboard's UI/U
 - **Seamless Dashboard Access** – Clicking "Analytics" passes the token via URL parameter, automatically logging you into the dashboard
 - **Context Menu** – Right-click any link on a webpage to shorten it (service worker handles this)
 
-## Deployment Notes
+## Deployment
+
+### Production Deployment on VM Server
+
+Complete deployment guide for hosting on a VM server (e.g., `192.168.2.236`) with Nginx, Gunicorn, and rate limiting:
+
+📖 **See [deployment/DEPLOYMENT.md](./deployment/DEPLOYMENT.md) for complete instructions.**
+
+**Quick Deploy:**
+```bash
+# On your VM server
+cd /var/www/peeklink
+sudo chmod +x deployment/deploy.sh
+sudo ./deployment/deploy.sh
+```
+
+**Key Features:**
+- ✅ Gunicorn WSGI server for Django
+- ✅ Nginx reverse proxy with rate limiting
+- ✅ Systemd services for all components
+- ✅ DDoS protection via rate limiting
+- ✅ Optional Fail2Ban integration
+- ✅ SSL/HTTPS support (Let's Encrypt)
+
+**Rate Limiting:**
+- API endpoints: 10 req/s (burst: 20)
+- Auth endpoints: 5 req/s (burst: 5)
+- Verdict service: 20 req/s (burst: 30)
+- Connection limit: 20 per IP
+
+### Configuration Notes
 - Configure real SMTP credentials via environment vars (`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS/SSL`).
-- Set `SITE_BASE_URL` to your branded domain so APIs return fully qualified short URLs.
-- Run `python manage.py collectstatic` before deploying Django behind a real web server.
+- Set `SITE_BASE_URL` to your server IP/domain so APIs return fully qualified short URLs.
+- Update `ALLOWED_HOSTS` in Django settings for your domain/IP.
+- Run `python manage.py collectstatic` before deploying Django behind Nginx.
 - The `infra/` folder includes Docker Compose + Caddy examples for multi-service hosting.
 - For extension distribution, build with `npm run build` and package the `extension_mv3` folder (including `dist/`, `manifest.json`, `icons/`, etc.) for Chrome Web Store submission.
 

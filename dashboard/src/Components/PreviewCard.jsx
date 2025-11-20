@@ -6,7 +6,7 @@ function Badge({ label, score }) {
   if (label === "warning") { bg = "#fff8e1"; fg = "#8d6e00"; }
   if (label === "blocked") { bg = "#ffebee"; fg = "#c62828"; }
   return <span style={{ background: bg, color: fg, padding: "6px 10px", borderRadius: 8, fontWeight: 600 }}>
-    {label[0].toUpperCase()+label.slice(1)} {typeof score==="number" ? `score=${score.toFixed(2)}`:""}
+    {label[0].toUpperCase()+label.slice(1)} {typeof score==="number" ? `threat=${score.toFixed(2)}`:""}
   </span>;
 }
 
