@@ -35,6 +35,9 @@ export default function LinksPage() {
                 <th style={th}>Target</th>
                 <th style={th}>Clicks</th>
                 <th style={th}>Password</th>
+                <th style={th}>Expiry</th>
+                <th style={th}>Click Limit</th>
+                <th style={th}>Expired?</th>
                 <th style={th}>Analytics</th>
               </tr>
             </thead>
@@ -45,12 +48,17 @@ export default function LinksPage() {
                   <td style={{ ...td, maxWidth: 420, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{row.target}</td>
                   <td style={td}>{row.clicks}</td>
                   <td style={td}>{row.require_password ? "on" : "off"}</td>
+                  <td style={td}>{row.expires_at ? new Date(row.expires_at).toLocaleString() : "—"}</td>
+                  <td style={td}>{row.max_clicks ?? "—"}</td>
+                  <td style={{ ...td, color: row.is_expired ? "#dc2626" : "#15803d" }}>
+                    {row.is_expired ? "Yes" : "No"}
+                  </td>
                   <td style={td}>{row.analytics_opt_in ? "on" : "off"}</td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td style={{ ...td, paddingTop: 24 }} colSpan={5}>
+                  <td style={{ ...td, paddingTop: 24 }} colSpan={8}>
                     No links yet. Shorten one to get started.
                   </td>
                 </tr>

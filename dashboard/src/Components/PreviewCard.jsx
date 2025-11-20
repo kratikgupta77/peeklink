@@ -19,7 +19,7 @@ export default function PreviewCard({ linkId }) {
   const [shortOverride, setShortOverride] = useState("");
 
   const previewUrl = useMemo(() => `${API_BASE}/p/${linkId}`, [linkId]);
-  const shortUrl = useMemo(() => shortOverride || `${API_BASE}/r/${linkId}`, [shortOverride, linkId]);
+  const shortUrl = useMemo(() => shortOverride || `${API_BASE}/p/${linkId}`, [shortOverride, linkId]);
 
   useEffect(() => {
     let cancelled = false;

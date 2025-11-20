@@ -10,7 +10,7 @@ from django.http import JsonResponse, HttpResponse, HttpResponseNotAllowed, Http
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.functions import TruncDate
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -21,6 +21,12 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.core.mail import send_mail
 
+IST = timezone.get_fixed_timezone(5 * 60 + 30)
+
+def _make_aware(dt):
+    if dt and timezone.is_naive(dt):
+        return timezone.make_aware(dt, IST)
+    return dt
 
 def _json(request):
     try:
@@ -31,7 +37,7 @@ def _json(request):
 
 def _short_url(link_id: str) -> str:
     base = (getattr(settings, "SITE_BASE_URL", "http://127.0.0.1:8000") or "").rstrip("/")
-    return f"{base}/r/{link_id}"
+    return f"{base}/p/{link_id}"
 
 
 def _target_alive(url: str, timeout: float = 4.0):
@@ -66,6 +72,16 @@ def create_link(request):
                 "detail": reason,
             }, status=400)
 
+        # Check verdict BEFORE creating link - block malicious URLs
+        verdict = score_url(target)
+        if verdict.get("label") == "blocked":
+            reasons = ", ".join(verdict.get("reasons", [])) or "security policy"
+            return JsonResponse({
+                "error": "url_blocked",
+                "message": f"This URL is blocked by security policy ({reasons}). Short links cannot be created for malicious URLs.",
+                "detail": reasons,
+            }, status=403)
+
         link = Link(
             target=target,
             analytics_opt_in=bool(data.get("analytics_opt_in", False)),
@@ -78,11 +94,13 @@ def create_link(request):
         if expires:
             dt = parse_datetime(expires)
             if dt:
-                link.expires_at = dt
+                link.expires_at = _make_aware(dt)
         max_clicks = data.get("max_clicks")
-        if max_clicks is not None:
+        if max_clicks not in (None, "", []):
             try:
-                link.max_clicks = int(max_clicks)
+                mc = int(max_clicks)
+                if mc > 0:
+                    link.max_clicks = mc
             except (ValueError, TypeError):
                 pass
         link.save()
@@ -108,6 +126,8 @@ def get_link(request, link_id):
         "id": link.id,
         "target": link.target,
         "expires_at": link.expires_at,
+        "max_clicks": link.max_clicks,
+        "is_expired": link.is_expired,
         "analytics_opt_in": link.analytics_opt_in,
         "require_password": link.require_password,
         "has_password": bool(link.password_hash),
@@ -131,7 +151,17 @@ def update_link(request, link_id):
         pw = data["password"]
         link.password_hash = None if not pw else hashlib.sha256(pw.encode()).hexdigest()
     if "expires_at" in data:
-        link.expires_at = parse_datetime(data["expires_at"]) if data["expires_at"] else None
+        link.expires_at = _make_aware(parse_datetime(data["expires_at"])) if data["expires_at"] else None
+    if "max_clicks" in data:
+        mc = data["max_clicks"]
+        if mc in (None, "", []):
+            link.max_clicks = None
+        else:
+            try:
+                mc_val = int(mc)
+                link.max_clicks = mc_val if mc_val > 0 else None
+            except (ValueError, TypeError):
+                pass
     if "analytics_opt_in" in data:
         link.analytics_opt_in = bool(data["analytics_opt_in"])
 
@@ -167,8 +197,37 @@ from django.utils import timezone
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseBadRequest
 import html
 
-def _check_expired(link):
-    return link.expires_at and link.expires_at <= timezone.now()
+def _redirect_click_count(link):
+    return link.events.filter(event="redirect", success=True).count()
+
+
+def _check_expired(link, include_pending_click=False):
+    link.refresh_from_db()
+    if getattr(link, "is_expired", False):
+        return True, "marked"
+
+    if link.expires_at:
+        expires_at = _make_aware(link.expires_at)
+        now = timezone.now()
+        if expires_at <= now:
+            return True, "time"
+
+    if link.max_clicks is not None:
+        clicks = _redirect_click_count(link)
+        if include_pending_click:
+            clicks += 1
+        if clicks >= link.max_clicks:
+            return True, "clicks"
+
+    return False, None
+
+
+def _mark_if_expired(link, include_pending_click=False):
+    expired, reason = _check_expired(link, include_pending_click)
+    if expired and not link.is_expired:
+        link.is_expired = True
+        link.save(update_fields=["is_expired"])
+    return expired, reason
 
 def _pw_ok(link, provided):
     if not link.password_hash:
@@ -187,8 +246,14 @@ def preview_gate(request, link_id):
     except Link.DoesNotExist:
         return HttpResponseNotFound("Link not found")
 
-    if _check_expired(link):
-        return HttpResponseForbidden("Link expired")
+    expired, reason = _mark_if_expired(link)
+    if expired:
+        msg = "Link expired"
+        if reason == "time":
+            msg = "Link expired by time"
+        elif reason == "clicks":
+            msg = "Link expired by clicks"
+        return HttpResponseForbidden(msg)
 
     # Call model service for verdict
     verdict = score_url(link.target)  # {url,label,p,reasons}
@@ -214,7 +279,7 @@ def preview_gate(request, link_id):
             continue_html = (
                 f'<p>This link is password protected.</p>'
                 f'<form method="GET" action="/r/{link_id}">'
-                f'<input name="pw" placeholder="Password" style="padding:8px;margin-right:8px;">'
+                f'<input type="password" name="pw" placeholder="Password" style="padding:8px;margin-right:8px;">'
                 f'<button type="submit" style="padding:8px 12px;">Continue</button>'
                 f'</form>'
             )
@@ -253,8 +318,14 @@ def resolve_redirect(request, link_id):
     except Link.DoesNotExist:
         return HttpResponseNotFound("Link not found")
 
-    if _check_expired(link):
-        return HttpResponseForbidden("Link expired")
+    expired, reason = _mark_if_expired(link)
+    if expired:
+        msg = "Link expired"
+        if reason == "time":
+            msg = "Link expired by time"
+        elif reason == "clicks":
+            msg = "Link expired by clicks"
+        return HttpResponseForbidden(msg)
 
     # Security verdict gate: block if model says "blocked"
     v = score_url(link.target)
@@ -273,9 +344,16 @@ def resolve_redirect(request, link_id):
         if not _pw_ok(link, pw):
             return HttpResponseForbidden("Password required or incorrect")
 
+    # If this redirect would exceed click cap, block now
+    will_expire, reason = _mark_if_expired(link, include_pending_click=True)
+    if will_expire and reason == "clicks":
+        return HttpResponseForbidden("Link expired by clicks")
+
     # For "warning", we still allow (preview already showed caution)
     _log_event(link, "redirect", v, request, success=True)
-    return redirect(link.target)
+    response = redirect(link.target)
+    _mark_if_expired(link)  # update flag after redirect
+    return response
 
 
 
@@ -359,6 +437,16 @@ def links_collection(request):
                 "detail": reason,
             }, status=400)
 
+        # Check verdict BEFORE creating link - block malicious URLs
+        verdict = score_url(target)
+        if verdict.get("label") == "blocked":
+            reasons = ", ".join(verdict.get("reasons", [])) or "security policy"
+            return Response({
+                "error": "url_blocked",
+                "message": f"This URL is blocked by security policy ({reasons}). Short links cannot be created for malicious URLs.",
+                "detail": reasons,
+            }, status=403)
+
         link = Link(
             owner=request.user,  # ⬅ tie to creator
             target=target,
@@ -371,11 +459,14 @@ def links_collection(request):
         expires = data.get("expires_at")
         if expires:
             dt = parse_datetime(expires)
-            link.expires_at = dt
+            if dt:
+                link.expires_at = _make_aware(dt)
         max_clicks = data.get("max_clicks")
-        if max_clicks is not None:
+        if max_clicks not in (None, "", []):
             try:
-                link.max_clicks = int(max_clicks)
+                mc = int(max_clicks)
+                if mc > 0:
+                    link.max_clicks = mc
             except (ValueError, TypeError):
                 pass
         link.save()
@@ -383,8 +474,18 @@ def links_collection(request):
 
     # GET list (owner-only)
     qs = Link.objects.filter(owner=request.user).order_by("-created_at")
-    rows = qs.annotate(clicks=Count("events")).values(
-        "id", "target", "created_at", "analytics_opt_in", "require_password", "clicks"
+    rows = qs.annotate(
+        clicks=Count("events", filter=Q(events__event="redirect", events__success=True))
+    ).values(
+        "id",
+        "target",
+        "created_at",
+        "analytics_opt_in",
+        "require_password",
+        "clicks",
+        "expires_at",
+        "max_clicks",
+        "is_expired",
     )
     out = [{
         "id": r["id"],
@@ -393,6 +494,9 @@ def links_collection(request):
         "analytics_opt_in": r["analytics_opt_in"],
         "require_password": r["require_password"],
         "clicks": r["clicks"],
+        "expires_at": r["expires_at"],
+        "max_clicks": r["max_clicks"],
+        "is_expired": r["is_expired"],
         "short_url": _short_url(r["id"]),
     } for r in rows]
     return Response(out)
