@@ -6,6 +6,8 @@ export default function ShortenForm({ onCreated }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [success, setSuccess] = useState("");
+  const [shortUrl, setShortUrl] = useState("");
   const [requirePassword, setRequirePassword] = useState(false);
   const [password, setPassword] = useState("");
   const [expiryType, setExpiryType] = useState("none");
@@ -26,6 +28,8 @@ export default function ShortenForm({ onCreated }) {
 
   async function createLink() {
     setErr("");
+    setSuccess("");
+    setShortUrl("");
     if (!/^https?:\/\//i.test(url)) {
       setErr("Enter a valid http(s) URL");
       return;
@@ -94,6 +98,11 @@ export default function ShortenForm({ onCreated }) {
       }
 
       const data = await r.json();
+      
+      // Show success message with short link
+      const short = data.short_url || `${apiBase}/p/${data.id}`;
+      setSuccess("Short link created!");
+      setShortUrl(short);
       
       // Reset form
       setUrl("");
@@ -224,6 +233,26 @@ export default function ShortenForm({ onCreated }) {
       </button>
 
       {err && <div style={{ color: "#dc2626", marginTop: 12, fontSize: 13 }}>{err}</div>}
+      {success && (
+        <div style={{ color: "#15803d", marginTop: 12, fontSize: 13 }}>
+          {success}{" "}
+          {shortUrl && (
+            <>
+              <code style={{ background: "#f1f5f9", padding: "4px 8px", borderRadius: 6, marginLeft: 8 }}>{shortUrl}</code>
+              <button
+                style={{ marginLeft: 8, padding: "6px 10px", fontSize: 12, borderRadius: 6, border: "1px solid #ccc", background: "white", cursor: "pointer" }}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(shortUrl);
+                  } catch (_) {}
+                }}
+              >
+                Copy
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -167,20 +167,25 @@ export default function PreviewCard({ linkId }) {
         >
           Open Preview
         </button>
-        {verdict?.label === "safe" && (
-          <button
-            onClick={copyShort}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 6,
-              border: "1px solid #ccc",
-              background: "white",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Copy Link
-          </button>
+        {verdict?.label === "safe" && shortUrl && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 200 }}>
+              <code style={{ padding: "6px 10px", borderRadius: 6, background: "#f7f7f7", fontSize: 11, flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{shortUrl}</code>
+              <button
+                onClick={copyShort}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #ccc",
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Copy
+              </button>
+            </div>
+          </>
         )}
         <button
           onClick={openAnalytics}

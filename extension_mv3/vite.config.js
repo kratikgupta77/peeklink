@@ -4,10 +4,10 @@ import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
+  base: "./", // Use relative paths for Chrome extension
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    base: "./", // Use relative paths for Chrome extension
     rollupOptions: {
       input: resolve(__dirname, "popup.html"),
       output: {
