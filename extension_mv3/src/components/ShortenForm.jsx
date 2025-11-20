@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 
-export default function ShortenForm({ onCreated }) {
+export default function ShortenForm({ onCreated, onPreview }) {
   const { token } = useAuth();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,6 +13,8 @@ export default function ShortenForm({ onCreated }) {
   const [expiryType, setExpiryType] = useState("none");
   const [expiresAt, setExpiresAt] = useState("");
   const [maxClicks, setMaxClicks] = useState("");
+  const [showAdditionalOptions, setShowAdditionalOptions] = useState(false);
+  const [domainName, setDomainName] = useState("127.0.0.1:8000");
 
   async function getApiBase() {
     return new Promise((resolve) => {
@@ -101,18 +103,13 @@ export default function ShortenForm({ onCreated }) {
       
       // Show success message with short link
       const short = data.short_url || `${apiBase}/p/${data.id}`;
-      setSuccess("Short link created!");
+      setSuccess("Short URL created:");
       setShortUrl(short);
+      setShowAdditionalOptions(true);
       
-      // Reset form
-      setUrl("");
-      setRequirePassword(false);
-      setPassword("");
-      setExpiryType("none");
-      setExpiresAt("");
-      setMaxClicks("");
+      // Don't reset form - keep values visible
       
-      onCreated?.(data.id);
+      onCreated?.(data.id, short);
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -135,83 +132,178 @@ export default function ShortenForm({ onCreated }) {
     }
   }
 
+  const minDatetimeLocal = useMemo(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  }, []);
+
   return (
-    <div style={{ background: "white", borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-      <h3 style={{ marginBottom: 12, fontSize: 16, fontWeight: 600 }}>Shorten & Preview</h3>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 500, color: "#374151" }}>
+          Destination URL
+        </label>
         <input
-          placeholder="https://example.com"
+          type="text"
+          placeholder="https://current-page.com"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyPress={(e) => e.key === "Enter" && !loading && createLink()}
-          style={{ flex: 1, padding: 10, borderRadius: 8, border: "1px solid #ccc", fontSize: 14 }}
-        />
-        <button
-          onClick={useCurrentTab}
           style={{
-            padding: "10px 14px",
-            borderRadius: 8,
-            border: "1px solid #ccc",
-            background: "white",
-            cursor: "pointer",
-            fontSize: 12,
-            whiteSpace: "nowrap",
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 6,
+            border: "1px solid #d1d5db",
+            fontSize: 14,
           }}
-        >
-          Use Tab
-        </button>
+        />
       </div>
 
-      <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #eee" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 }}>
-          <input
-            type="checkbox"
-            checked={requirePassword}
-            onChange={(e) => setRequirePassword(e.target.checked)}
-          />
-          Password protect this link
-        </label>
-        {requirePassword && (
-          <input
-            type="password"
-            placeholder="Enter password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid #ccc", marginBottom: 8, fontSize: 13 }}
-          />
-        )}
-
-        <label style={{ display: "block", marginTop: 8, marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
-          Expiry (optional)
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 500, color: "#374151" }}>
+          Domain Name
         </label>
         <select
-          value={expiryType}
-          onChange={(e) => setExpiryType(e.target.value)}
-          style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid #ccc", marginBottom: 8, fontSize: 13 }}
+          value={domainName}
+          onChange={(e) => setDomainName(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 6,
+            border: "1px solid #d1d5db",
+            fontSize: 14,
+            background: "white",
+          }}
         >
-          <option value="none">No expiry</option>
-          <option value="time">Time-based expiry</option>
-          <option value="clicks">Click-based expiry</option>
+          <option value="127.0.0.1:8000">127.0.0.1:8000</option>
+          <option value="peek.link">peek.link</option>
         </select>
-        {expiryType === "time" && (
-          <input
-            type="datetime-local"
-            value={expiresAt}
-            onChange={(e) => setExpiresAt(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid #ccc", marginBottom: 8, fontSize: 13 }}
-          />
-        )}
-        {expiryType === "clicks" && (
-          <input
-            type="number"
-            placeholder="Maximum number of clicks"
-            min="1"
-            value={maxClicks}
-            onChange={(e) => setMaxClicks(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid #ccc", marginBottom: 8, fontSize: 13 }}
-          />
-        )}
       </div>
+
+      {!showAdditionalOptions ? (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 500, color: "#374151" }}>
+              Expiration
+            </label>
+            <select
+              value={expiryType}
+              onChange={(e) => {
+                setExpiryType(e.target.value);
+                setExpiresAt("");
+                setMaxClicks("");
+              }}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 6,
+                border: "1px solid #d1d5db",
+                fontSize: 14,
+                background: "white",
+              }}
+            >
+              <option value="none">No expiry</option>
+              <option value="time">Time-based expiry</option>
+              <option value="clicks">Click-based expiry</option>
+            </select>
+          </div>
+
+          {expiryType === "time" && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                Expiration Date
+              </label>
+              <input
+                type="datetime-local"
+                min={minDatetimeLocal}
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                placeholder="dd-mm-yyyy --:--"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #d1d5db",
+                  fontSize: 14,
+                }}
+              />
+            </div>
+          )}
+
+          {expiryType === "clicks" && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                Maximum Clicks
+              </label>
+              <input
+                type="number"
+                placeholder="Enter maximum number of clicks"
+                min="1"
+                value={maxClicks}
+                onChange={(e) => setMaxClicks(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #d1d5db",
+                  fontSize: 14,
+                }}
+              />
+            </div>
+          )}
+
+          {requirePassword && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                Enter Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #d1d5db",
+                  fontSize: 14,
+                }}
+              />
+            </div>
+          )}
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={requirePassword}
+                onChange={(e) => setRequirePassword(e.target.checked)}
+                style={{ cursor: "pointer" }}
+              />
+              <span style={{ color: "#374151" }}>Password protect this link</span>
+            </label>
+          </div>
+        </>
+      ) : (
+        <div style={{ marginBottom: 16 }}>
+          <button
+            onClick={() => setShowAdditionalOptions(false)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#2563eb",
+              cursor: "pointer",
+              fontSize: 13,
+              textDecoration: "underline",
+              padding: 0,
+            }}
+          >
+            Additional Options
+          </button>
+        </div>
+      )}
 
       <button
         onClick={createLink}
@@ -219,38 +311,45 @@ export default function ShortenForm({ onCreated }) {
         style={{
           width: "100%",
           padding: "12px",
-          borderRadius: 8,
+          borderRadius: 6,
           border: "none",
-          background: loading ? "#9ca3af" : "#2563eb",
-          color: "white",
-          fontWeight: 600,
+          background: loading ? "#9ca3af" : "#111827",
+          color: "#ffffff",
+          fontWeight: 500,
           cursor: loading ? "not-allowed" : "pointer",
           fontSize: 14,
-          marginTop: 12,
+          marginBottom: 16,
         }}
       >
-        {loading ? "Creating…" : "Shorten & Preview"}
+        {loading ? "Creating…" : "Create Link"}
       </button>
 
-      {err && <div style={{ color: "#dc2626", marginTop: 12, fontSize: 13 }}>{err}</div>}
-      {success && (
-        <div style={{ color: "#15803d", marginTop: 12, fontSize: 13 }}>
-          {success}{" "}
-          {shortUrl && (
-            <>
-              <code style={{ background: "#f1f5f9", padding: "4px 8px", borderRadius: 6, marginLeft: 8 }}>{shortUrl}</code>
-              <button
-                style={{ marginLeft: 8, padding: "6px 10px", fontSize: 12, borderRadius: 6, border: "1px solid #ccc", background: "white", cursor: "pointer" }}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(shortUrl);
-                  } catch (_) {}
-                }}
-              >
-                Copy
-              </button>
-            </>
-          )}
+      {err && <div style={{ color: "#dc2626", marginTop: 8, marginBottom: 12, fontSize: 13 }}>{err}</div>}
+      
+      {success && shortUrl && (
+        <div style={{ background: "#dbeafe", border: "1px solid #93c5fd", borderRadius: 8, padding: 12, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: "#1e40af", marginBottom: 8 }}>
+            {success} <strong style={{ wordBreak: "break-all" }}>{shortUrl}</strong>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(shortUrl);
+              } catch (_) {}
+            }}
+            style={{
+              padding: "6px 12px",
+              background: "#111827",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
+            Copy
+          </button>
         </div>
       )}
     </div>

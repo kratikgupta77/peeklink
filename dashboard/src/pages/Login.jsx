@@ -1,15 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import AuthShell from "../Components/AuthShell.jsx";
 
 export default function LoginPage() {
-  const { setToken } = useAuth();
+  const { token, setToken } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // If already logged in (e.g., from extension), redirect to dashboard
+  useEffect(() => {
+    if (token) {
+      navigate("/shorten", { replace: true });
+    }
+  }, [token, navigate]);
 
   async function handleLogin(e) {
     e.preventDefault();

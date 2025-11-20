@@ -9,7 +9,8 @@ PeekLink is a full-stack toolchain for creators who need branded short links, pr
 - **Security Verdicts** – FastAPI `verdicts/` service scores every URL (heuristics + block rules) and blocks dangerous destinations before redirect.
 - **Creator Dashboard** – React app with dedicated pages for Shorten & Preview, Clicks by Day, Verdict Breakdown, Top Referrers, and My Links.
 - **Analytics Pipeline** – Click events stored with verdict labels, success flags, referrers, and time series aggregation for charts.
-- **Admin & Extensions** – Django admin enabled at `/admin/`; Chrome MV3 extension scaffold provided.
+- **Chrome Extension (MV3)** – Full-featured React-based browser extension with authentication, link shortening, preview, and seamless dashboard integration.
+- **Admin Panel** – Django admin enabled at `/admin/` for user and link management.
 
 ## Repository Layout
 - `backend_drf/` – Django API (`/api/links`, `/api/analytics/*`, `/api/auth/*`, `/p/<id>`, `/r/<id>`)
@@ -66,15 +67,62 @@ PeekLink is a full-stack toolchain for creators who need branded short links, pr
    python manage.py runserver 127.0.0.1:8000
    ```
 
+7. **Build Chrome Extension** (optional)
+   ```bash
+   cd ../extension_mv3
+   npm install
+   npm run build
+   ```
+   Then load the extension in Chrome:
+   - Go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the `extension_mv3` directory
+
 Optionally, start everything at once with `./run_local.sh` (requires Bash-compatible shell and Node/Python tooling installed).
 
 ## Usage Flow
+
+### Web Dashboard
 1. Visit `http://127.0.0.1:5173/signup`, create an account, and verify the emailed OTP.
 2. Sign in to access the dashboard tabs:
-   - **Shorten & Preview** – Create links, copy the branded `/r/<id>` URL, and open the `/p/<id>` sandbox.
+   - **Shorten & Preview** – Create links, copy the branded `/p/<id>` URL, and open the preview sandbox.
    - **Clicks / Verdicts / Referrers** – Visualize analytics pulled from `/api/analytics/*`.
-   - **My Links** – Inspect short IDs, click counts, passwords, and analytics status.
+   - **My Links** – Inspect short IDs, click counts, passwords, expiry status, and analytics.
 3. Use `/p/<id>` for public previews and `/r/<id>` for redirects; blocked links show policy reasons.
+
+### Chrome Extension
+The PeekLink extension provides a convenient way to shorten links directly from your browser:
+
+**Setup:**
+1. Build the extension: `cd extension_mv3 && npm install && npm run build`
+2. Load it in Chrome via `chrome://extensions/` (Developer mode → Load unpacked → select `extension_mv3` folder)
+3. Configure API and Dashboard URLs in the extension options page (right-click extension icon → Options)
+
+**Features:**
+- **Authentication Required** – Login page appears when extension is first opened; tokens are stored in `chrome.storage.sync` for persistence across sessions
+- **Shorten Tab** – Create short links with:
+  - Destination URL input
+  - Domain name selector
+  - Expiration options (None, Time-based, Click-based)
+  - Password protection
+  - Success message with copy button
+- **Preview Tab** – Check URL safety before shortening:
+  - Enter any URL to preview
+  - Get real-time security verdict (Safe/Warning/Blocked)
+  - View details: Final Destination, Redirects, Response Time, Status Code
+- **Bottom Navigation**:
+  - **Analytics** (Shorten tab only) – Opens dashboard with automatic login via token
+  - **Settings** – Opens extension options page
+  - **Logout** – Clears authentication and returns to login
+
+**Workflow:**
+1. Click the extension icon → Login page appears if not authenticated
+2. Enter credentials → Token stored, main interface loads
+3. Use **Shorten** tab to create links with expiry/password options
+4. Use **Preview** tab to check URL safety before shortening
+5. Click **Analytics** to open dashboard (automatically logged in)
+6. All created links sync with your dashboard account
 
 ## Deployment Notes
 - Configure real SMTP credentials via environment vars (`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS/SSL`).

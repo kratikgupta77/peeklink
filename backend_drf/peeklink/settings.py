@@ -5,7 +5,7 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
 import dotenv
 dotenv.load_dotenv()
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
-DEBUG = os.environ.get("DEBUG","1") == "1"
+DEBUG = False
 ALLOWED_HOSTS = ["*"]
 SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "http://127.0.0.1:8000")
 
