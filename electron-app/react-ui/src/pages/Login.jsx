@@ -35,16 +35,30 @@ export default function LoginPage() {
       
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
-        throw new Error(body.detail || `Login failed (${resp.status})`);
+        const errorMsg = body.detail || body.message || `Login failed (${resp.status})`;
+        throw new Error(errorMsg);
       }
       
       const data = await resp.json();
       
       // Store refresh token
-      localStorage.setItem("refresh", data.refresh);
-      setToken(data.access);
+      if (data.refresh) {
+        localStorage.setItem("refresh", data.refresh);
+        localStorage.setItem("refreshToken", data.refresh);
+      }
+      if (data.access) {
+        setToken(data.access);
+      } else {
+        throw new Error("No access token received");
+      }
     } catch (err) {
-      setStatus(err.message);
+      // Better error handling for network errors
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        setStatus(`Cannot connect to server. Please check:\n1. API URL: ${apiBase}\n2. Server is running\n3. Network connection`);
+      } else {
+        setStatus(err.message);
+      }
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
