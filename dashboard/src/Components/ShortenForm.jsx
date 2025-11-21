@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { apiFetch } from "../api";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+// Use window.location.origin for production, or VITE_API_BASE if set, or fallback to localhost
+const API_BASE = typeof window !== 'undefined' ? window.location.origin : (import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000");
 
 export default function ShortenForm({ onCreated }) {
   const [url, setUrl] = useState("");
