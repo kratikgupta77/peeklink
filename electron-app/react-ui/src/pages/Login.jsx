@@ -8,7 +8,14 @@ export default function LoginPage() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiBase] = useState(() => {
-    return localStorage.getItem("apiBase") || "http://127.0.0.1:8000";
+    let base = localStorage.getItem("apiBase") || "https://192.168.2.236";
+    // Force HTTPS if HTTP is used
+    if (base.startsWith('http://')) {
+      base = 'https://' + base.substring(7);
+    } else if (!base.startsWith('https://') && !base.startsWith('http://')) {
+      base = `https://${base}`;
+    }
+    return base;
   });
 
   async function handleLogin(e) {

@@ -48,7 +48,7 @@ export default function ShortenPage() {
   function openSettings() {
     // In Electron, we can show a settings dialog or window
     // For now, just show an alert with instructions
-    alert("Settings:\n\nAPI Base: " + (localStorage.getItem("apiBase") || "http://127.0.0.1:8000") + "\n\nTo change settings, edit localStorage in DevTools (F12)");
+    alert("Settings:\n\nAPI Base: " + (localStorage.getItem("apiBase") || "https://192.168.2.236") + "\n\nTo change settings, edit localStorage in DevTools (F12)");
   }
 
   return (
@@ -96,7 +96,7 @@ export default function ShortenPage() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: "16px" }}>
+      <div style={{ padding: "16px", paddingBottom: "80px", minHeight: "calc(100vh - 120px)" }}>
         {activeTab === "shorten" && (
           <ShortenForm onCreated={handleCreated} onPreview={handlePreview} />
         )}
