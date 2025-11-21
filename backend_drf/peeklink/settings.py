@@ -9,6 +9,18 @@ DEBUG = False
 ALLOWED_HOSTS = ["*"]
 SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "http://127.0.0.1:8000")
 
+# HTTPS/Proxy configuration (when behind nginx with SSL)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+CSRF_TRUSTED_ORIGINS = [
+    'https://192.168.2.236',
+    'http://192.168.2.236',  # Allow HTTP for local development
+    'https://127.0.0.1',
+    'http://127.0.0.1',
+]
+# Use secure cookies when behind HTTPS proxy
+SESSION_COOKIE_SECURE = False  # Set to True in production with valid SSL cert
+CSRF_COOKIE_SECURE = False  # Set to True in production with valid SSL cert
+
 INSTALLED_APPS = [
     "django.contrib.admin","django.contrib.auth","django.contrib.contenttypes",
     "django.contrib.sessions","django.contrib.messages","django.contrib.staticfiles",
