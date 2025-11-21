@@ -10,12 +10,10 @@ export default function PreviewTab({ url, linkId }) {
   const [details, setDetails] = useState(null);
   const [err, setErr] = useState("");
   const [apiBase] = useState(() => {
-    let base = localStorage.getItem("apiBase") || "https://192.168.2.236";
-    // Force HTTPS if HTTP is used
-    if (base.startsWith('http://')) {
-      base = 'https://' + base.substring(7);
-    } else if (!base.startsWith('https://') && !base.startsWith('http://')) {
-      base = `https://${base}`;
+    let base = localStorage.getItem("apiBase") || "http://127.0.0.1:8000";
+    // Ensure protocol is present
+    if (!base.startsWith('https://') && !base.startsWith('http://')) {
+      base = `http://${base}`;
     }
     return base;
   });

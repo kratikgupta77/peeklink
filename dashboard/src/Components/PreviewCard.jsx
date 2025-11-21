@@ -10,8 +10,7 @@ function Badge({ label, score }) {
   </span>;
 }
 
-// Use window.location.origin for production, or VITE_API_BASE if set, or fallback to localhost
-const API_BASE = typeof window !== 'undefined' ? window.location.origin : (import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000");
+const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
 
 export default function PreviewCard({ linkId }) {
   const [target, setTarget] = useState("");
@@ -19,15 +18,8 @@ export default function PreviewCard({ linkId }) {
   const [err, setErr] = useState("");
   const [shortOverride, setShortOverride] = useState("");
 
-  const previewUrl = useMemo(() => {
-    const base = typeof window !== 'undefined' ? window.location.origin : API_BASE;
-    return `${base}/p/${linkId}`;
-  }, [linkId]);
-  const shortUrl = useMemo(() => {
-    if (shortOverride) return shortOverride;
-    const base = typeof window !== 'undefined' ? window.location.origin : API_BASE;
-    return `${base}/p/${linkId}`;
-  }, [shortOverride, linkId]);
+  const previewUrl = useMemo(() => `${API_BASE}/p/${linkId}`, [linkId]);
+  const shortUrl = useMemo(() => shortOverride || `${API_BASE}/p/${linkId}`, [shortOverride, linkId]);
 
   useEffect(() => {
     let cancelled = false;

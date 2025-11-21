@@ -8,12 +8,10 @@ export default function LoginPage() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiBase] = useState(() => {
-    let base = localStorage.getItem("apiBase") || "https://192.168.2.236";
-    // Force HTTPS if HTTP is used
-    if (base.startsWith('http://')) {
-      base = 'https://' + base.substring(7);
-    } else if (!base.startsWith('https://') && !base.startsWith('http://')) {
-      base = `https://${base}`;
+    let base = localStorage.getItem("apiBase") || "http://127.0.0.1:8000";
+    // Ensure protocol is present
+    if (!base.startsWith('https://') && !base.startsWith('http://')) {
+      base = `http://${base}`;
     }
     return base;
   });
@@ -65,13 +63,10 @@ export default function LoginPage() {
   }
 
   function openDashboard() {
-    let dashboardBase = localStorage.getItem("dashboardBase") || "https://192.168.2.236";
-    // Force HTTPS - always use https:// instead of http://
-    if (dashboardBase.startsWith('http://')) {
-      dashboardBase = 'https://' + dashboardBase.substring(7); // Replace http:// with https://
-    } else if (!dashboardBase.startsWith('https://') && !dashboardBase.startsWith('http://')) {
-      // If no protocol, assume HTTPS
-      dashboardBase = `https://${dashboardBase}`;
+    let dashboardBase = localStorage.getItem("dashboardBase") || "http://127.0.0.1:5173";
+    // Ensure protocol is present
+    if (!dashboardBase.startsWith('https://') && !dashboardBase.startsWith('http://')) {
+      dashboardBase = `http://${dashboardBase}`;
     }
     window.open(`${dashboardBase}/login`, "_blank");
   }

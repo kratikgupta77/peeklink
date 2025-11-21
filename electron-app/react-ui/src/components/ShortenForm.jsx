@@ -17,12 +17,10 @@ export default function ShortenForm({ onCreated, onPreview }) {
   const [showAdditionalOptions, setShowAdditionalOptions] = useState(false);
   const [domainName, setDomainName] = useState("127.0.0.1:8000");
   const [apiBase, setApiBase] = useState(() => {
-    let base = localStorage.getItem("apiBase") || "https://192.168.2.236";
-    // Force HTTPS if HTTP is used
-    if (base.startsWith('http://')) {
-      base = 'https://' + base.substring(7);
-    } else if (!base.startsWith('https://') && !base.startsWith('http://')) {
-      base = `https://${base}`;
+    let base = localStorage.getItem("apiBase") || "http://127.0.0.1:8000";
+    // Ensure protocol is present
+    if (!base.startsWith('https://') && !base.startsWith('http://')) {
+      base = `http://${base}`;
     }
     return base;
   });
@@ -95,11 +93,7 @@ export default function ShortenForm({ onCreated, onPreview }) {
       const data = await r.json();
       
       // Show success message with short link
-      let short = data.short_url || `${apiBase}/p/${data.id}`;
-      // Force HTTPS - always use https:// instead of http://
-      if (short.startsWith('http://')) {
-        short = 'https://' + short.substring(7); // Replace http:// with https://
-      }
+      const short = data.short_url || `${apiBase}/p/${data.id}`;
       setSuccess("Short URL created:");
       setShortUrl(short);
       setShowAdditionalOptions(true);
