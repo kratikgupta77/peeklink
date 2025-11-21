@@ -20,12 +20,26 @@ export default function PreviewCard({ linkId }) {
   const [shortOverride, setShortOverride] = useState("");
 
   const previewUrl = useMemo(() => {
-    const base = typeof window !== 'undefined' ? window.location.origin : API_BASE;
+    let base = typeof window !== 'undefined' ? window.location.origin : API_BASE;
+    // Force HTTPS - always use https:// instead of http://
+    if (base.startsWith('http://')) {
+      base = 'https://' + base.substring(7); // Replace http:// with https://
+    }
     return `${base}/p/${linkId}`;
   }, [linkId]);
   const shortUrl = useMemo(() => {
-    if (shortOverride) return shortOverride;
-    const base = typeof window !== 'undefined' ? window.location.origin : API_BASE;
+    if (shortOverride) {
+      // Force HTTPS if the override URL is HTTP
+      if (shortOverride.startsWith('http://')) {
+        return 'https://' + shortOverride.substring(7); // Replace http:// with https://
+      }
+      return shortOverride;
+    }
+    let base = typeof window !== 'undefined' ? window.location.origin : API_BASE;
+    // Force HTTPS - always use https:// instead of http://
+    if (base.startsWith('http://')) {
+      base = 'https://' + base.substring(7); // Replace http:// with https://
+    }
     return `${base}/p/${linkId}`;
   }, [shortOverride, linkId]);
 

@@ -6,9 +6,11 @@ After=network.target
 User=www-data
 Group=www-data
 WorkingDirectory=/var/www/peeklink/backend_drf
-Environment="PATH=/var/www/peeklink/venv/bin"
+Environment="PATH=/var/www/peeklink/venv/bin:/usr/local/bin:/usr/bin:/bin"
+
+#Environment="PATH=/var/www/peeklink/venv/bin"
 Environment="DJANGO_SETTINGS_MODULE=peeklink.settings"
-Environment="SITE_BASE_URL=http://192.168.2.236"
+Environment="SITE_BASE_URL=https://192.168.2.236"
 ExecStart=/var/www/peeklink/venv/bin/gunicorn \
     --config /var/www/peeklink/deployment/gunicorn_config.py \
     peeklink.wsgi:application
