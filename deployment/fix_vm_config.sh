@@ -11,23 +11,32 @@ echo ""
 # 1. Update Django .env file if it exists
 if [ -f "$PROJECT_DIR/backend_drf/.env" ]; then
     echo "📝 Updating .env file..."
-    sed -i "s|SITE_BASE_URL=.*|SITE_BASE_URL=http://$VM_IP|g" "$PROJECT_DIR/backend_drf/.env"
+    # Remove any existing SITE_BASE_URL line (including group40.com)
+    sed -i "/^SITE_BASE_URL=/d" "$PROJECT_DIR/backend_drf/.env"
+    # Add the correct one
+    echo "SITE_BASE_URL=http://$VM_IP" >> "$PROJECT_DIR/backend_drf/.env"
     sed -i "s|ALLOWED_HOSTS=.*|ALLOWED_HOSTS=$VM_IP,localhost,127.0.0.1|g" "$PROJECT_DIR/backend_drf/.env" 2>/dev/null || true
-    echo "✅ Updated .env file"
+    echo "✅ Updated .env file (removed any group40.com references)"
 else
     echo "⚠️  No .env file found at $PROJECT_DIR/backend_drf/.env"
     echo "   Creating .env file..."
     mkdir -p "$PROJECT_DIR/backend_drf"
-    echo "SITE_BASE_URL=http://$VM_IP" >> "$PROJECT_DIR/backend_drf/.env"
+    echo "SITE_BASE_URL=http://$VM_IP" > "$PROJECT_DIR/backend_drf/.env"
     echo "✅ Created .env file"
 fi
 
 # 2. Update Gunicorn service
 if [ -f "/etc/systemd/system/gunicorn.service" ]; then
     echo "📝 Updating Gunicorn service..."
-    sudo sed -i "s|Environment=\"SITE_BASE_URL=.*\"|Environment=\"SITE_BASE_URL=http://$VM_IP\"|g" \
-        "/etc/systemd/system/gunicorn.service"
-    echo "✅ Updated Gunicorn service"
+    # Remove any existing SITE_BASE_URL line (including group40.com)
+    sudo sed -i "/Environment=\"SITE_BASE_URL=/d" "/etc/systemd/system/gunicorn.service"
+    # Add the correct one after the first Environment line or at the end of [Service]
+    if grep -q "Environment=" "/etc/systemd/system/gunicorn.service"; then
+        sudo sed -i "/Environment=/a Environment=\"SITE_BASE_URL=http://$VM_IP\"" "/etc/systemd/system/gunicorn.service"
+    else
+        sudo sed -i "/\[Service\]/a Environment=\"SITE_BASE_URL=http://$VM_IP\"" "/etc/systemd/system/gunicorn.service"
+    fi
+    echo "✅ Updated Gunicorn service (removed any group40.com references)"
     sudo systemctl daemon-reload
     echo "✅ Reloaded systemd daemon"
 else
