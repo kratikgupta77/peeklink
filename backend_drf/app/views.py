@@ -107,9 +107,15 @@ def create_link(request):
         return JsonResponse({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
     except Exception as e:
         logger.error(f"Error in create_link: {e}", exc_info=True)
+        error_msg = str(e)
+        # Provide user-friendly error messages
+        if "readonly" in error_msg.lower() or "permission denied" in error_msg.lower():
+            error_msg = "Database permission error. Please contact administrator."
+        elif "database" in error_msg.lower() or "db" in error_msg.lower():
+            error_msg = "Database error. Please try again or contact administrator."
         return JsonResponse({
             "error": "internal_error",
-            "message": "An error occurred while creating the link. Please try again.",
+            "message": error_msg,
             "detail": str(e)
         }, status=500)
 
@@ -425,52 +431,72 @@ def _log_event(link, event, verdict, request, success=True):
 @permission_classes([IsAuthenticated])
 def links_collection(request):
     if request.method == "POST":
-        data = request.data
-        target = data.get("target")
-        if not target:
-            return Response({"error": "target required"}, status=400)
-        ok, reason = _target_alive(target)
-        if not ok:
-            return Response({
-                "error": "target_unreachable",
-                "message": "Destination site could not be reached.",
-                "detail": reason,
-            }, status=400)
+        try:
+            data = request.data
+            target = data.get("target")
+            if not target:
+                return Response({"error": "target required"}, status=400)
+            ok, reason = _target_alive(target)
+            if not ok:
+                return Response({
+                    "error": "target_unreachable",
+                    "message": "Destination site could not be reached.",
+                    "detail": reason,
+                }, status=400)
 
-        # Check verdict BEFORE creating link - block malicious URLs
-        verdict = score_url(target)
-        if verdict.get("label") == "blocked":
-            reasons = ", ".join(verdict.get("reasons", [])) or "security policy"
-            return Response({
-                "error": "url_blocked",
-                "message": f"This URL is blocked by security policy ({reasons}). Short links cannot be created for malicious URLs.",
-                "detail": reasons,
-            }, status=403)
-
-        link = Link(
-            owner=request.user,  # ⬅ tie to creator
-            target=target,
-            analytics_opt_in=bool(data.get("analytics_opt_in", False)),
-            require_password=bool(data.get("require_password", False)),
-        )
-        pw = data.get("password")
-        if pw:
-            link.password_hash = hashlib.sha256(pw.encode()).hexdigest()
-        expires = data.get("expires_at")
-        if expires:
-            dt = parse_datetime(expires)
-            if dt:
-                link.expires_at = _make_aware(dt)
-        max_clicks = data.get("max_clicks")
-        if max_clicks not in (None, "", []):
+            # Check verdict BEFORE creating link - block malicious URLs
             try:
-                mc = int(max_clicks)
-                if mc > 0:
-                    link.max_clicks = mc
-            except (ValueError, TypeError):
-                pass
-        link.save()
-        return Response({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
+                verdict = score_url(target)
+            except Exception as e:
+                logger.error(f"Error calling score_url: {e}", exc_info=True)
+                # Continue with safe verdict if verdict service fails
+                verdict = {"url": target, "label": "safe", "p": 0.0, "reasons": ["verdict_service_unavailable"]}
+            
+            if verdict.get("label") == "blocked":
+                reasons = ", ".join(verdict.get("reasons", [])) or "security policy"
+                return Response({
+                    "error": "url_blocked",
+                    "message": f"This URL is blocked by security policy ({reasons}). Short links cannot be created for malicious URLs.",
+                    "detail": reasons,
+                }, status=403)
+
+            link = Link(
+                owner=request.user,  # ⬅ tie to creator
+                target=target,
+                analytics_opt_in=bool(data.get("analytics_opt_in", False)),
+                require_password=bool(data.get("require_password", False)),
+            )
+            pw = data.get("password")
+            if pw:
+                link.password_hash = hashlib.sha256(pw.encode()).hexdigest()
+            expires = data.get("expires_at")
+            if expires:
+                dt = parse_datetime(expires)
+                if dt:
+                    link.expires_at = _make_aware(dt)
+            max_clicks = data.get("max_clicks")
+            if max_clicks not in (None, "", []):
+                try:
+                    mc = int(max_clicks)
+                    if mc > 0:
+                        link.max_clicks = mc
+                except (ValueError, TypeError):
+                    pass
+            link.save()
+            return Response({"id": link.id, "target": link.target, "short_url": _short_url(link.id)})
+        except Exception as e:
+            logger.error(f"Error in links_collection POST: {e}", exc_info=True)
+            error_msg = str(e)
+            # Provide user-friendly error messages
+            if "readonly" in error_msg.lower() or "permission denied" in error_msg.lower():
+                error_msg = "Database permission error. Please contact administrator."
+            elif "database" in error_msg.lower() or "db" in error_msg.lower():
+                error_msg = "Database error. Please try again or contact administrator."
+            return Response({
+                "error": "internal_error",
+                "message": error_msg,
+                "detail": str(e)
+            }, status=500)
 
     # GET list (owner-only)
     qs = Link.objects.filter(owner=request.user).order_by("-created_at")

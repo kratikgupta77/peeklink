@@ -81,7 +81,16 @@ export default function ShortenForm({ onCreated }) {
         try {
           const errJson = await resp.json();
           msg = errJson.message || errJson.error || msg;
-        } catch (_) {}
+          // Provide user-friendly messages for common errors
+          if (msg.includes("readonly") || msg.includes("permission") || msg.includes("Database permission")) {
+            msg = "Database permission error. Please contact the administrator to fix database permissions.";
+          } else if (msg.includes("database") || msg.includes("Database error")) {
+            msg = "Database error. Please try again or contact the administrator.";
+          }
+        } catch (_) {
+          // If we can't parse JSON, use status text
+          msg = `API Error ${resp.status}: ${resp.statusText || "Unknown error"}`;
+        }
         throw new Error(msg);
       }
 

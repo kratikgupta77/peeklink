@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { apiFetch } from "../api.js";
 
 export default function PreviewTab({ url, linkId }) {
   const { token } = useAuth();
@@ -40,9 +41,7 @@ export default function PreviewTab({ url, linkId }) {
         const linkId = peekLinkMatch[1];
         try {
           // Fetch the actual target URL from the backend
-          const linkResp = await fetch(`${apiBase}/api/links/${linkId}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          });
+          const linkResp = await apiFetch(`${apiBase}/api/links/${linkId}`);
           if (linkResp.ok) {
             const linkData = await linkResp.json();
             actualTargetUrl = linkData.target;
@@ -112,9 +111,7 @@ export default function PreviewTab({ url, linkId }) {
       // If we have a linkId, fetch the target URL
       (async () => {
         try {
-          const r = await fetch(`${apiBase}/api/links/${linkId}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          });
+          const r = await apiFetch(`${apiBase}/api/links/${linkId}`);
           if (r.ok) {
             const data = await r.json();
             setPreviewUrl(data.target);

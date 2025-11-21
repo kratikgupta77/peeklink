@@ -26,12 +26,29 @@ def _canon(u: str):
     return full, host
 
 def is_in_phishtank(u: str) -> bool:
-    latest = r.get("phishtank:latest")
-    if not latest:
+    try:
+        # Get the actual set name from the pointer
+        set_name_ptr = r.get("phishtank:latest")
+        if not set_name_ptr:
+            return False
+        
+        # Decode if bytes
+        set_name = set_name_ptr.decode() if isinstance(set_name_ptr, bytes) else set_name_ptr
+        
+        # Check if the set exists and has data
+        count = r.scard(set_name)
+        if count == 0:
+            return False
+        
+        full, host = _canon(u)
+        # exact URL or host-only match
+        if r.sismember(set_name, full): 
+            return True
+        if r.sismember(set_name, host): 
+            return True
         return False
-    latest = latest.decode() if isinstance(latest, bytes) else latest
-    full, host = _canon(u)
-    # exact URL or host-only match
-    if r.sismember(latest, full): return True
-    if r.sismember(latest, host): return True
-    return False
+    except Exception as e:
+        # If Redis connection fails or any error, return False
+        import logging
+        logging.warning(f"PhishTank check failed: {e}")
+        return False

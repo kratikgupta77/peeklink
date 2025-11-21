@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { apiFetch, parseApiError } from "../api.js";
 
 export default function ShortenForm({ onCreated, onPreview }) {
   const { token } = useAuth();
@@ -78,22 +79,17 @@ export default function ShortenForm({ onCreated, onPreview }) {
         payload.max_clicks = maxClicksValue;
       }
 
-      const r = await fetch(`${apiBase}/api/links`, {
+      const r = await apiFetch(`${apiBase}/api/links`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
       });
 
       if (!r.ok) {
-        let msg = `API ${r.status}`;
-        try {
-          const errJson = await r.json();
-          msg = errJson.message || errJson.error || msg;
-        } catch (_) {}
-        throw new Error(msg);
+        const errorMsg = await parseApiError(r);
+        throw new Error(errorMsg || `API Error ${r.status}`);
       }
 
       const data = await r.json();
