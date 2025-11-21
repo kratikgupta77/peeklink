@@ -27,7 +27,14 @@ export default function ShortenPage() {
   }
 
   function openAnalytics() {
-    const dashboardBase = localStorage.getItem("dashboardBase") || "http://127.0.0.1:5173";
+    let dashboardBase = localStorage.getItem("dashboardBase") || "https://192.168.2.236";
+    // Force HTTPS - always use https:// instead of http://
+    if (dashboardBase.startsWith('http://')) {
+      dashboardBase = 'https://' + dashboardBase.substring(7); // Replace http:// with https://
+    } else if (!dashboardBase.startsWith('https://') && !dashboardBase.startsWith('http://')) {
+      // If no protocol, assume HTTPS
+      dashboardBase = `https://${dashboardBase}`;
+    }
     const storedToken = token;
     
     if (storedToken) {
