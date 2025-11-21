@@ -92,7 +92,11 @@ export default function ShortenForm({ onCreated, onPreview }) {
       const data = await r.json();
       
       // Show success message with short link
-      const short = data.short_url || `${apiBase}/p/${data.id}`;
+      let short = data.short_url || `${apiBase}/p/${data.id}`;
+      // Force HTTPS - always use https:// instead of http://
+      if (short.startsWith('http://')) {
+        short = 'https://' + short.substring(7); // Replace http:// with https://
+      }
       setSuccess("Short URL created:");
       setShortUrl(short);
       setShowAdditionalOptions(true);
